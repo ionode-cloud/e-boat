@@ -78,5 +78,9 @@ app.delete('/api/boats/:id', async (req, res) => {
   res.json({ message: 'Deleted' });
 });
 
-const PORT = 4000;
-app.listen(PORT, () => console.log(`API running on http://localhost:${PORT}`));
+const PORT = process.env.PORT || 4000;
+
+app.listen(PORT, () => {
+  console.log(`🚀 API running on port ${PORT}`);
+});
+
