@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EV Boat Monitoring - Chilika Lake</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0c4a6e 0%, #1e3a8a 100%);
+            color: white;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding-top: 10vh;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .map-container {
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            position: relative;
+        }
+
+        #map {
+            height: 500px;
+            width: 100%;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+
+        .data-panel {
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            max-height: 542px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .boat-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .boat-card {
+            background: rgba(255,255,255,0.15);
+            border-radius: 15px;
+            padding: 20px;
+            border-left: 5px solid #3b82f6;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .boat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            background: rgba(255,255,255,0.25);
+        }
+
+        .boat-card.active {
+            border-left-color: #10b981;
+            background: rgba(16,185,129,0.3);
+        }
+
+        .boat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 8px;
+        }
+
+        .boat-id {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #60a5fa;
+        }
+
+        .status {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+
+        .status.online { background: rgba(16,185,129,0.3); color: #10b981; }
+        .status.offline { background: rgba(239,68,68,0.3); color: #ef4444; }
+
+        .params-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+        }
+
+        .param {
+            text-align: center;
+            padding: 12px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+        }
+
+        .param-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .param-label {
+            font-size: 0.85em;
+            opacity: 0.9;
+        }
+
+        .coordinates {
+            font-family: monospace;
+            background: rgba(0,0,0,0.3);
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+
+        .legend {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.85em;
+        }
+
+        .all-boats-btn {
+            position: absolute;
+            top: -60px;
+            left: 5px;
+            background: linear-gradient(135deg, #0c4a6e 0%, #1e3a8a 100%);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+            z-index: 500;
+        }
+
+        .all-boats-btn:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+
+        .filter-bar {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            border: none;
+            border-radius: 18px;
+            padding: 6px 14px;
+            font-size: 0.85em;
+            font-weight: 600;
+            cursor: pointer;
+            background: rgba(15,23,42,0.5);
+            color: #e5e7eb;
+            transition: background 0.15s ease, transform 0.1s ease;
+        }
+
+        .filter-btn:hover {
+            background: rgba(30,64,175,0.8);
+        }
+
+        .filter-btn.active {
+            background: #10b981;
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .filter-btn.offline-active {
+            background: #ef4444;
+            color: white;
+        }
+
+        .crud-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .crud-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn-sm {
+            border: none;
+            border-radius: 16px;
+            padding: 6px 10px;
+            font-size: 0.8em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s ease, transform 0.1s ease;
+        }
+
+        .btn-add {
+            background: #10b981;
+            color: white;
+        }
+        .btn-add:hover {
+            background: #059669;
+        }
+
+        .btn-refresh {
+            background: #3b82f6;
+            color: white;
+        }
+        .btn-refresh:hover {
+            background: #2563eb;
+        }
+
+        .btn-delete {
+            background: #ef4444;
+            color: white;
+        }
+        .btn-delete:hover {
+            background: #dc2626;
+        }
+
+        .btn-edit {
+            background: #f59e0b;
+            color: white;
+        }
+        .btn-edit:hover {
+            background: #d97706;
+        }
+
+        .btn-download {
+            background: #6366f1;
+            color: white;
+        }
+        .btn-download:hover {
+            background: #4f46e5;
+        }
+
+        .status-text {
+            font-size: 0.8em;
+            opacity: 0.9;
+        }
+
+        .form-inline {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .form-inline input,
+        .form-inline select {
+            border-radius: 12px;
+            border: none;
+            padding: 4px 8px;
+            font-size: 0.8em;
+        }
+
+        .form-inline input {
+            width: 70px;
+        }
+
+        .form-inline .wide-input {
+            width: 110px;
+        }
+
+        .small-label {
+            font-size: 0.75em;
+            opacity: 0.8;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                padding: 10px;
+            }
+            .header h1 {
+                font-size: 1.8em;
+            }
+            .all-boats-btn {
+                top: -50px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚤 EV Boat Monitoring - Chilika Lake</h1>
+        <p>Real-time water quality & EV boat telemetry (MongoDB + API)</p>
+    </div>
+
+    <div class="container">
+        <div class="map-container">
+            <button class="all-boats-btn" onclick="showAllBoats()">All Boats</button>
+            <div id="map"></div>
+            <div class="legend">
+                <div>🔵 Online Boats</div>
+                <div>🔴 Offline Boats</div>
+                <div>📍 Chilika Lake (19.8°N, 85.3°E)</div>
+            </div>
+        </div>
+
+        <div class="data-panel">
+            <div class="crud-bar">
+                <h2 style="margin-bottom: 0;">Live Boat Data</h2>
+                <div class="crud-buttons">
+                    <button class="btn-sm btn-add" onclick="showAddForm()">+ Add Boat</button>
+                    <button class="btn-sm btn-refresh" onclick="loadBoatsFromApi()">⟳ Refresh</button>
+                    <!-- NEW: Download button -->
+                    <button class="btn-sm btn-download" onclick="downloadBoatsAsExcel()">⬇ Download Excel</button>
+                </div>
+            </div>
+
+            <div id="statusText" class="status-text">Loading from API...</div>
+
+            <div id="addForm" style="margin: 8px 0 14px 0; display:none;">
+                <div class="small-label">Add new EV boat (saved to MongoDB)</div>
+                <div class="form-inline">
+                    <input id="newId" class="wide-input" placeholder="Boat ID (EVB-001)" />
+                    <input id="newLat" placeholder="Lat" />
+                    <input id="newLon" placeholder="Lon" />
+                    <input id="newPH" placeholder="pH" />
+                    <input id="newTDS" placeholder="TDS" />
+                    <input id="newTurb" placeholder="Turb" />
+                </div>
+                <div class="form-inline">
+                    <input id="newVolt" placeholder="Volt" />
+                    <input id="newCurr" placeholder="Curr" />
+                    <select id="newStatus">
+                        <option value="online">online</option>
+                        <option value="offline">offline</option>
+                    </select>
+                    <button class="btn-sm btn-add" onclick="submitNewBoat()">Save</button>
+                    <button class="btn-sm btn-delete" onclick="hideAddForm()">Cancel</button>
+                </div>
+            </div>
+
+            <div class="filter-bar">
+                <button id="btnAll" class="filter-btn active" onclick="setFilter('all')">All</button>
+                <button id="btnOnline" class="filter-btn" onclick="setFilter('online')">Online</button>
+                <button id="btnOffline" class="filter-btn" onclick="setFilter('offline')">Offline</button>
+            </div>
+
+            <div class="boat-list" id="boatList">
+                <!-- Dynamic boat cards -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <script>
+        const chilikaCenter = [19.72, 85.35];
+
+        const API_BASE = 'http://localhost:4000/api/boats';
+
+        let boatsData = [];
+        let map;
+        let boatMarkers = {};
+        let activeBoat = null;
+        let currentFilter = 'all';
+
+        function initMap() {
+            map = L.map('map').setView(chilikaCenter, 12);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            updateBoats();
+        }
+
+        function showAllBoats() {
+            const markers = Object.values(boatMarkers);
+            if (markers.length === 0) {
+                map.setView(chilikaCenter, 12);
+                return;
+            }
+
+            const bounds = L.latLngBounds([]);
+            markers.forEach(m => bounds.extend(m.getLatLng()));
+            map.fitBounds(bounds, { padding: [40, 40] });
+
+            const panel = document.querySelector('.data-panel');
+            if (panel) panel.scrollTop = 0;
+
+            activeBoat = null;
+            document.querySelectorAll('.boat-card').forEach(card => {
+                card.classList.remove('active');
+            });
+        }
+
+        function setFilter(filter) {
+            currentFilter = filter;
+
+            document.getElementById('btnAll').classList.remove('active');
+            document.getElementById('btnOnline').classList.remove('active');
+            document.getElementById('btnOffline').classList.remove('active');
+
+            if (filter === 'all') {
+                document.getElementById('btnAll').classList.add('active');
+            } else if (filter === 'online') {
+                document.getElementById('btnOnline').classList.add('active');
+            } else if (filter === 'offline') {
+                document.getElementById('btnOffline').classList.add('active');
+            }
+
+            updateBoats();
+        }
+
+        function updateBoats() {
+            Object.values(boatMarkers).forEach(marker => map.removeLayer(marker));
+            boatMarkers = {};
+
+            renderBoatCards();
+
+            const boatsToShow = boatsData.filter(boat => {
+                const isOnline = boat.status === 'online' &&
+                                 (Date.now() - new Date(boat.timestamp).getTime()) < 300000;
+                if (currentFilter === 'online') return isOnline;
+                if (currentFilter === 'offline') return !isOnline;
+                return true;
+            });
+
+            boatsToShow.forEach(boat => {
+                const isOnline = boat.status === 'online' &&
+                                 (Date.now() - new Date(boat.timestamp).getTime()) < 300000;
+
+                const marker = L.marker([boat.lat, boat.lon], {
+                    icon: L.divIcon({
+                        className: 'custom-boat-icon',
+                        html: `<div style="background: ${isOnline ? '#10b981' : '#ef4444'}; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5);"></div>`,
+                        iconSize: [26, 26],
+                        iconAnchor: [13, 13]
+                    })
+                }).addTo(map)
+                .bindPopup(`
+                    <b>${boat.id}</b><br>
+                    pH: ${boat.pH}<br>
+                    TDS: ${boat.tds} ppm<br>
+                    Turbidity: ${boat.turbidity} NTU<br>
+                    Status: ${isOnline ? '🟢 Online' : '🔴 Offline'}
+                `);
+
+                boatMarkers[boat._id] = marker;
+            });
+        }
+
+        function renderBoatCards() {
+            const boatList = document.getElementById('boatList');
+            boatList.innerHTML = '';
+
+            const filteredBoats = boatsData.filter(boat => {
+                const isOnline = boat.status === 'online' &&
+                                 (Date.now() - new Date(boat.timestamp).getTime()) < 300000;
+                if (currentFilter === 'online') return isOnline;
+                if (currentFilter === 'offline') return !isOnline;
+                return true;
+            });
+
+            if (filteredBoats.length === 0) {
+                boatList.innerHTML = '<div style="opacity:0.8;font-size:0.9em;">No boats for this filter.</div>';
+                return;
+            }
+
+            filteredBoats.forEach(boat => {
+                const isOnline = boat.status === 'online' &&
+                                 (Date.now() - new Date(boat.timestamp).getTime()) < 300000;
+
+                const card = document.createElement('div');
+                card.className = `boat-card ${activeBoat === boat._id ? 'active' : ''}`;
+                card.onclick = () => selectBoat(boat._id);
+
+                card.innerHTML = `
+                    <div class="boat-header">
+                        <div class="boat-id">${boat.id}</div>
+                        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                            <div class="status ${isOnline ? 'online' : 'offline'}">
+                                ${isOnline ? '🟢 ONLINE' : '🔴 OFFLINE'}
+                            </div>
+                            <button class="btn-sm btn-edit"
+                                onclick="event.stopPropagation(); toggleOnline('${boat._id}', ${isOnline})">
+                                ${isOnline ? 'Set Offline' : 'Set Online'}
+                            </button>
+                            <button class="btn-sm btn-delete"
+                                onclick="event.stopPropagation(); deleteBoat('${boat._id}')">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                    <div class="params-grid">
+                        <div class="param">
+                            <span class="param-value">${Number(boat.pH).toFixed(2)}</span>
+                            <span class="param-label">pH</span>
+                        </div>
+                        <div class="param">
+                            <span class="param-value">${Number(boat.tds).toFixed(0)}</span>
+                            <span class="param-label">TDS (ppm)</span>
+                        </div>
+                        <div class="param">
+                            <span class="param-value">${Number(boat.turbidity).toFixed(1)}</span>
+                            <span class="param-label">Turbidity (NTU)</span>
+                        </div>
+                        <div class="param">
+                            <span class="param-value">${Number(boat.voltage).toFixed(1)}V</span>
+                            <span class="param-label">Voltage</span>
+                        </div>
+                        <div class="param">
+                            <span class="param-value">${Number(boat.current).toFixed(1)}A</span>
+                            <span class="param-label">Current</span>
+                        </div>
+                    </div>
+                    <div class="coordinates">
+                        📍 ${Number(boat.lat).toFixed(4)}, ${Number(boat.lon).toFixed(4)}
+                    </div>
+                `;
+
+           
+
+                boatList.appendChild(card);
+            });
+        }
+
+        function selectBoat(dbId) {
+            document.querySelectorAll('.boat-card').forEach(card => {
+                card.classList.remove('active');
+            });
+
+            activeBoat = dbId;
+
+            const boat = boatsData.find(b => b._id === dbId);
+            if (boat) {
+                map.setView([boat.lat, boat.lon], 15);
+                if (boatMarkers[dbId]) {
+                    boatMarkers[dbId].openPopup();
+                }
+            }
+        }
+
+        async function loadBoatsFromApi() {
+            const statusEl = document.getElementById('statusText');
+            try {
+                statusEl.textContent = 'Loading from API...';
+                const res = await fetch(API_BASE);
+                if (!res.ok) throw new Error('Failed to load boats');
+                const data = await res.json();
+                boatsData = data.map(b => ({
+                    ...b,
+                    timestamp: b.timestamp || new Date().toISOString()
+                }));
+                statusEl.textContent = `Loaded ${boatsData.length} boat(s) from API.`;
+                updateBoats();
+            } catch (err) {
+                console.error(err);
+                statusEl.textContent = 'Error loading boats from API.';
+            }
+        }
+
+        async function addBoat(boat) {
+            const statusEl = document.getElementById('statusText');
+            try {
+                statusEl.textContent = 'Saving new boat...';
+                const res = await fetch(API_BASE, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(boat)
+                });
+                if (!res.ok) throw new Error('Failed to add boat');
+                const saved = await res.json();
+                boatsData.push({
+                    ...saved,
+                    timestamp: saved.timestamp || new Date().toISOString()
+                });
+                statusEl.textContent = 'Boat added.';
+                updateBoats();
+            } catch (err) {
+                console.error(err);
+                statusEl.textContent = 'Error adding boat.';
+            }
+        }
+
+        async function updateBoat(dbId, updates) {
+            const statusEl = document.getElementById('statusText');
+            try {
+                statusEl.textContent = 'Updating boat...';
+                const res = await fetch(`${API_BASE}/${dbId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates)
+                });
+                if (!res.ok) throw new Error('Failed to update boat');
+                const updated = await res.json();
+                const idx = boatsData.findIndex(b => b._id === dbId);
+                if (idx !== -1) {
+                    boatsData[idx] = {
+                        ...updated,
+                        timestamp: updated.timestamp || new Date().toISOString()
+                    };
+                }
+                statusEl.textContent = 'Boat updated.';
+                updateBoats();
+            } catch (err) {
+                console.error(err);
+                statusEl.textContent = 'Error updating boat.';
+            }
+        }
+
+        async function deleteBoat(dbId) {
+            const statusEl = document.getElementById('statusText');
+            if (!confirm('Delete this boat?')) return;
+
+            try {
+                statusEl.textContent = 'Deleting boat...';
+                const res = await fetch(`${API_BASE}/${dbId}`, {
+                    method: 'DELETE'
+                });
+                if (!res.ok) throw new Error('Failed to delete boat');
+                boatsData = boatsData.filter(b => b._id !== dbId);
+                statusEl.textContent = 'Boat deleted.';
+                updateBoats();
+            } catch (err) {
+                console.error(err);
+                statusEl.textContent = 'Error deleting boat.';
+            }
+        }
+
+        function toggleOnline(dbId, currentlyOnline) {
+            const newStatus = currentlyOnline ? 'offline' : 'online';
+            updateBoat(dbId, { status: newStatus });
+        }
+
+        function showAddForm() {
+            document.getElementById('addForm').style.display = 'block';
+        }
+
+        function hideAddForm() {
+            document.getElementById('addForm').style.display = 'none';
+        }
+
+        function submitNewBoat() {
+            const id = document.getElementById('newId').value.trim();
+            const lat = parseFloat(document.getElementById('newLat').value);
+            const lon = parseFloat(document.getElementById('newLon').value);
+            const pH = parseFloat(document.getElementById('newPH').value);
+            const tds = parseFloat(document.getElementById('newTDS').value);
+            const turbidity = parseFloat(document.getElementById('newTurb').value);
+            const voltage = parseFloat(document.getElementById('newVolt').value);
+            const current = parseFloat(document.getElementById('newCurr').value);
+            const status = document.getElementById('newStatus').value;
+
+            if (!id || isNaN(lat) || isNaN(lon)) {
+                alert('Please enter at least ID, Lat, Lon.');
+                return;
+            }
+
+            const boat = {
+                id,
+                lat,
+                lon,
+                pH: isNaN(pH) ? 7.5 : pH,
+                tds: isNaN(tds) ? 450 : tds,
+                turbidity: isNaN(turbidity) ? 10 : turbidity,
+                voltage: isNaN(voltage) ? 48 : voltage,
+                current: isNaN(current) ? 15 : current,
+                status
+            };
+
+            addBoat(boat);
+
+            document.getElementById('newId').value = '';
+            document.getElementById('newLat').value = '';
+            document.getElementById('newLon').value = '';
+            document.getElementById('newPH').value = '';
+            document.getElementById('newTDS').value = '';
+            document.getElementById('newTurb').value = '';
+            document.getElementById('newVolt').value = '';
+            document.getElementById('newCurr').value = '';
+        }
+
+        function simulateDataUpdates() {
+            setInterval(() => {
+                boatsData.forEach(boat => {
+                    if (boat.status === 'online') {
+                        boat.pH += (Math.random() - 0.5) * 0.2;
+                        boat.tds += (Math.random() - 0.5) * 10;
+                        boat.turbidity += (Math.random() - 0.5) * 1;
+                        boat.voltage += (Math.random() - 0.5) * 0.5;
+                        boat.current += (Math.random() - 0.5) * 0.3;
+                        boat.timestamp = new Date().toISOString();
+                    }
+                });
+                updateBoats();
+            }, 5000);
+        }
+
+        // NEW: export boatsData to CSV (Excel-readable) and download
+        function downloadBoatsAsExcel() {
+            if (!boatsData.length) {
+                alert('No data to download.');
+                return;
+            }
+
+            // headers
+            const header = [
+                'MongoId',
+                'BoatId',
+                'Latitude',
+                'Longitude',
+                'pH',
+                'TDS',
+                'Turbidity',
+                'Voltage',
+                'Current',
+                'Status',
+                'Timestamp'
+            ];
+
+            const rows = boatsData.map(b => ([
+                b._id || '',
+                b.id || '',
+                b.lat,
+                b.lon,
+                b.pH,
+                b.tds,
+                b.turbidity,
+                b.voltage,
+                b.current,
+                b.status,
+                b.timestamp
+            ]));
+
+            let csv = '';
+            csv += header.join(',') + '\n';
+            rows.forEach(r => {
+                csv += r.join(',') + '\n';
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); // Excel opens CSV fine[web:78][web:87]
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', 'ev_boats_data.csv'); // user sees as Excel if default program is Excel[web:81][web:84]
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            loadBoatsFromApi();
+            simulateDataUpdates();
+        });
+    </script>
+</body>
+</html>
