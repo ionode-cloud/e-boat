@@ -15,6 +15,12 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB connected"))
   .catch(err => console.error("MongoDB error:", err.message));
 
+const cors = require('cors');
+app.use(cors({
+  origin: 'https://your-frontend-url.vercel.app,*'
+}));
+
+
 // schema & model
 const boatSchema = new mongoose.Schema({
   lat: Number,
