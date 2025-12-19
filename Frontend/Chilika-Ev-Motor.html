@@ -335,7 +335,7 @@
 <body>
     <div class="header">
         <h1>🚤 EV Boat Monitoring - Chilika Lake</h1>
-        <p>Real-time water quality & EV boat telemetry (MongoDB + API)</p>
+        <p>Real-time water quality & EV boat telemetry </p>
     </div>
 
     <div class="container">
@@ -401,6 +401,10 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
     <script>
+   fetch('https://e-boat.vercel.app/api/endpoint')
+    .then(res => res.json())
+    .then(data => console.log(data));
+
         const chilikaCenter = [19.72, 85.35];
 
         const API_BASE = 'https://ev-boat.onrender.com/api/boats';
@@ -599,7 +603,7 @@
                     ...b,
                     timestamp: b.timestamp || new Date().toISOString()
                 }));
-                statusEl.textContent = `Loaded ${boatsData.length} boat(s) from API.`;
+                statusEl.textContent = `Total Boats ${boatsData.length} `;
                 updateBoats();
             } catch (err) {
                 console.error(err);
