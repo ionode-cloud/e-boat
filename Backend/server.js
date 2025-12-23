@@ -15,12 +15,10 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB connected"))
   .catch(err => console.error("MongoDB error:", err.message));
 
-
-app.use(cors()); //allow all origin
-
-
-// schema & model
+// schema & model - ADDED name field
 const boatSchema = new mongoose.Schema({
+  id: { type: String, required: true },
+  name: { type: String, required: true },  // NEW: Boat name field
   lat: Number,
   lon: Number,
   pH: Number,
@@ -85,6 +83,5 @@ app.delete('/api/boats/:id', async (req, res) => {
 const PORT = process.env.PORT || 4000;
 
 app.listen(PORT, () => {
-  console.log(`🚀 API running on port ${PORT}`);
+  console.log(` API running on port ${PORT}`);
 });
-

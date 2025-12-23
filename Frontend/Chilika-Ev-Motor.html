@@ -109,6 +109,13 @@
             color: #60a5fa;
         }
 
+        .boat-name {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #93c5fd;
+            margin-bottom: 8px;
+        }
+
         .status {
             padding: 5px 12px;
             border-radius: 20px;
@@ -335,7 +342,7 @@
 <body>
     <div class="header">
         <h1>🚤 EV Boat Monitoring - Chilika Lake</h1>
-        <p>Real-time water quality & EV boat telemetry </p>
+        <p>Real-time water quality & EV boat telemetry</p>
     </div>
 
     <div class="container">
@@ -355,7 +362,6 @@
                 <div class="crud-buttons">
                     <button class="btn-sm btn-add" onclick="showAddForm()">+ Add Boat</button>
                     <button class="btn-sm btn-refresh" onclick="loadBoatsFromApi()">⟳ Refresh</button>
-                    <!-- NEW: Download button -->
                     <button class="btn-sm btn-download" onclick="downloadBoatsAsExcel()">⬇ Download Excel</button>
                 </div>
             </div>
@@ -366,13 +372,14 @@
                 <div class="small-label">Add new EV boat (saved to MongoDB)</div>
                 <div class="form-inline">
                     <input id="newId" class="wide-input" placeholder="Boat ID (EVB-001)" />
+                    <input id="newName" class="wide-input" placeholder="Boat Name" />
                     <input id="newLat" placeholder="Lat" />
                     <input id="newLon" placeholder="Lon" />
+                </div>
+                <div class="form-inline">
                     <input id="newPH" placeholder="pH" />
                     <input id="newTDS" placeholder="TDS" />
                     <input id="newTurb" placeholder="Turb" />
-                </div>
-                <div class="form-inline">
                     <input id="newVolt" placeholder="Volt" />
                     <input id="newCurr" placeholder="Curr" />
                     <select id="newStatus">
@@ -401,12 +408,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
     <script>
-   fetch('https://e-boat.vercel.app/api/endpoint')
-    .then(res => res.json())
-    .then(data => console.log(data));
-
         const chilikaCenter = [19.72, 85.35];
-
         const API_BASE = 'https://ev-boat.onrender.com/api/boats';
 
         let boatsData = [];
@@ -491,6 +493,7 @@
                 }).addTo(map)
                 .bindPopup(`
                     <b>${boat.id}</b><br>
+                    <b>${boat.name || 'N/A'}</b><br>
                     pH: ${boat.pH}<br>
                     TDS: ${boat.tds} ppm<br>
                     Turbidity: ${boat.turbidity} NTU<br>
@@ -528,7 +531,10 @@
 
                 card.innerHTML = `
                     <div class="boat-header">
-                        <div class="boat-id">${boat.id}</div>
+                        <div>
+                            <div class="boat-id">${boat.id}</div>
+                            <div class="boat-name">${boat.name || 'No Name'}</div>
+                        </div>
                         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
                             <div class="status ${isOnline ? 'online' : 'offline'}">
                                 ${isOnline ? '🟢 ONLINE' : '🔴 OFFLINE'}
@@ -570,8 +576,6 @@
                     </div>
                 `;
 
-           
-
                 boatList.appendChild(card);
             });
         }
@@ -603,7 +607,7 @@
                     ...b,
                     timestamp: b.timestamp || new Date().toISOString()
                 }));
-                statusEl.textContent = `Total Boats ${boatsData.length} `;
+                statusEl.textContent = `Total Boats: ${boatsData.length}`;
                 updateBoats();
             } catch (err) {
                 console.error(err);
@@ -694,6 +698,7 @@
 
         function submitNewBoat() {
             const id = document.getElementById('newId').value.trim();
+            const name = document.getElementById('newName').value.trim();
             const lat = parseFloat(document.getElementById('newLat').value);
             const lon = parseFloat(document.getElementById('newLon').value);
             const pH = parseFloat(document.getElementById('newPH').value);
@@ -703,13 +708,14 @@
             const current = parseFloat(document.getElementById('newCurr').value);
             const status = document.getElementById('newStatus').value;
 
-            if (!id || isNaN(lat) || isNaN(lon)) {
-                alert('Please enter at least ID, Lat, Lon.');
+            if (!id || !name || isNaN(lat) || isNaN(lon)) {
+                alert('Please enter at least ID, Name, Lat, and Lon.');
                 return;
             }
 
             const boat = {
                 id,
+                name,
                 lat,
                 lon,
                 pH: isNaN(pH) ? 7.5 : pH,
@@ -723,6 +729,7 @@
             addBoat(boat);
 
             document.getElementById('newId').value = '';
+            document.getElementById('newName').value = '';
             document.getElementById('newLat').value = '';
             document.getElementById('newLon').value = '';
             document.getElementById('newPH').value = '';
@@ -748,17 +755,16 @@
             }, 5000);
         }
 
-        // NEW: export boatsData to CSV (Excel-readable) and download
         function downloadBoatsAsExcel() {
             if (!boatsData.length) {
                 alert('No data to download.');
                 return;
             }
 
-            // headers
             const header = [
                 'MongoId',
                 'BoatId',
+                'Name',
                 'Latitude',
                 'Longitude',
                 'pH',
@@ -773,6 +779,7 @@
             const rows = boatsData.map(b => ([
                 b._id || '',
                 b.id || '',
+                b.name || '',
                 b.lat,
                 b.lon,
                 b.pH,
@@ -790,11 +797,11 @@
                 csv += r.join(',') + '\n';
             });
 
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); // Excel opens CSV fine[web:78][web:87]
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', 'ev_boats_data.csv'); // user sees as Excel if default program is Excel[web:81][web:84]
+            link.setAttribute('download', 'ev_boats_data.csv');
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
