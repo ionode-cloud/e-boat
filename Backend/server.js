@@ -1,4 +1,5 @@
-require("dotenv").config();
+// server.js
+require('dotenv').config();
 
 const express = require('express');
 const mongoose = require('mongoose');
@@ -6,19 +7,23 @@ const cors = require('cors');
 
 const app = express();
 
-// middleware
-app.use(cors());              // allow your HTML file to call this API
-app.use(express.json());      // parse JSON body
+// Middleware
+app.use(cors());              // Allow frontend to call this API
+app.use(express.json());      // Parse JSON bodies
 
-// connect MongoDB
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB connected"))
-  .catch(err => console.error("MongoDB error:", err.message));
+// Debug: check env (optional, remove later)
+// console.log("MONGO_URI:", process.env.MONGO_URI);
 
-// schema & model - ADDED name field
+// Connect MongoDB
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => console.log('MongoDB connected'))
+  .catch((err) => console.error('MongoDB error:', err.message));
+
+// Schema & model
 const boatSchema = new mongoose.Schema({
-  id: { type: String, required: true },
-  name: { type: String, required: true },  // NEW: Boat name field
+  id: { type: String, required: true },        // Your custom boat id
+  name: { type: String, required: true },      // Boat name
   lat: Number,
   lon: Number,
   pH: Number,
@@ -27,22 +32,27 @@ const boatSchema = new mongoose.Schema({
   voltage: Number,
   current: Number,
   status: { type: String, enum: ['online', 'offline'], default: 'online' },
-  timestamp: { type: Date, default: Date.now }
+  timestamp: { type: Date, default: Date.now },
 });
 
 const Boat = mongoose.model('Boat', boatSchema);
 
-// CRUD routes
+// Routes
 
 // GET all boats
 app.get('/boats', async (req, res) => {
-  const boats = await Boat.find();
-  res.json(boats);
+  try {
+    const boats = await Boat.find();
+    res.json(boats);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });
 
 // POST create new boat
 app.post('/boats', async (req, res) => {
   try {
+    // Expect at least: { id, name, ... }
     const boat = new Boat(req.body);
     await boat.save();
     res.status(201).json(boat);
@@ -51,11 +61,11 @@ app.post('/boats', async (req, res) => {
   }
 });
 
-// PUT update boat (replace/modify)
+// PUT update boat by custom id (NOT _id)
 app.put('/boats/:id', async (req, res) => {
   try {
-    const boat = await Boat.findByIdAndUpdate(
-      req.params.id,
+    const boat = await Boat.findOneAndUpdate(
+      { id: req.params.id },      // match your custom id field
       req.body,
       { new: true, runValidators: true }
     );
@@ -66,15 +76,24 @@ app.put('/boats/:id', async (req, res) => {
   }
 });
 
-// DELETE boat
+// DELETE boat by custom id
 app.delete('/boats/:id', async (req, res) => {
-  const boat = await Boat.findByIdAndDelete(req.params.id);
-  if (!boat) return res.status(404).json({ message: 'Not found' });
-  res.json({ message: 'Deleted' });
+  try {
+    const boat = await Boat.findOneAndDelete({ id: req.params.id });
+    if (!boat) return res.status(404).json({ message: 'Not found' });
+    res.json({ message: 'Deleted' });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
 });
 
-const PORT = process.env.PORT || 3000;
+// Root route (optional)
+app.get('/', (req, res) => {
+  res.send('EV Boats API is running');
+});
 
+// Server listen
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(` API running on port ${PORT}`);
+  console.log(`Server running at http://localhost:${PORT}/`);
 });
