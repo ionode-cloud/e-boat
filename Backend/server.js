@@ -40,18 +40,6 @@ app.get('/boats', async (req, res) => {
   res.json(boats);
 });
 
-app.get('/boats', async (req, res) => {
-  const boats = await Boat.find();
-  res.json(boats);
-});
-
-// GET one boat by id (DB id)
-app.get('/boats/:id', async (req, res) => {
-  const boat = await Boat.findById(req.params.id);
-  if (!boat) return res.status(404).json({ message: 'Not found' });
-  res.json(boat);
-});
-
 // POST create new boat
 app.post('/boats', async (req, res) => {
   try {
