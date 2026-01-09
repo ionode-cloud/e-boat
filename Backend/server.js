@@ -35,20 +35,24 @@ const Boat = mongoose.model('Boat', boatSchema);
 // CRUD routes
 
 // GET all boats
-app.get('/api/boats', async (req, res) => {
+app.get('/', (req, res) => {
+  res.send('E-Boat Backend API is running!');
+});
+
+app.get('/boats', async (req, res) => {
   const boats = await Boat.find();
   res.json(boats);
 });
 
 // GET one boat by id (DB id)
-app.get('/api/boats/:id', async (req, res) => {
+app.get('/boats/:id', async (req, res) => {
   const boat = await Boat.findById(req.params.id);
   if (!boat) return res.status(404).json({ message: 'Not found' });
   res.json(boat);
 });
 
 // POST create new boat
-app.post('/api/boats', async (req, res) => {
+app.post('/boats', async (req, res) => {
   try {
     const boat = new Boat(req.body);
     await boat.save();
@@ -59,7 +63,7 @@ app.post('/api/boats', async (req, res) => {
 });
 
 // PUT update boat (replace/modify)
-app.put('/api/boats/:id', async (req, res) => {
+app.put('/boats/:id', async (req, res) => {
   try {
     const boat = await Boat.findByIdAndUpdate(
       req.params.id,
@@ -74,7 +78,7 @@ app.put('/api/boats/:id', async (req, res) => {
 });
 
 // DELETE boat
-app.delete('/api/boats/:id', async (req, res) => {
+app.delete('/boats/:id', async (req, res) => {
   const boat = await Boat.findByIdAndDelete(req.params.id);
   if (!boat) return res.status(404).json({ message: 'Not found' });
   res.json({ message: 'Deleted' });
