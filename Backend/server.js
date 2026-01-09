@@ -35,8 +35,9 @@ const Boat = mongoose.model('Boat', boatSchema);
 // CRUD routes
 
 // GET all boats
-app.get('/', (req, res) => {
-  res.send('E-Boat Backend API is running!');
+app.get('/boats', async (req, res) => {
+  const boats = await Boat.find();
+  res.json(boats);
 });
 
 app.get('/boats', async (req, res) => {
