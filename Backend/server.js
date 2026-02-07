@@ -8,11 +8,7 @@ const cors = require('cors');
 const app = express();
 
 // Middleware
-app.use(cors({
-    origin: ['*','https://chilikaev.ionode.cloud'],
-    credentials: true
-}));
-             // Allow frontend to call this API
+app.use(cors());              // Allow frontend to call this API
 app.use(express.json());      // Parse JSON bodies
 
 // Debug: check env (optional, remove later)
